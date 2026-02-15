@@ -2,11 +2,16 @@ name: CD Workflow
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - develop
+      - main
 
 jobs:
-  docker:
+  deploy:
     runs-on: ubuntu-latest
+
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
     steps:
       - name: Checkout code
@@ -19,7 +24,19 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-study-app:latest .
+        run: |
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            TAG=latest
+          else
+            TAG=staging
+          fi
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/ci-study-app:$TAG .
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/ci-study-app:latest
+        run: |
+          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+            TAG=latest
+          else
+            TAG=staging
+          fi
+          docker push ${{ secrets.DOCKER_USERNAME }}/ci-study-app:$TAG
